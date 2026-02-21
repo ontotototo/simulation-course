@@ -147,9 +147,6 @@ class App(tk.Tk):
             return
         print(f"\n{'='*60}\n{'РЕЗУЛЬТАТЫ':^60}\n{'='*60}")
         print(f"{'Шаг':<10}{'Дальность':<15}{'Высота':<15}{'Скорость':<15}")
-        for r in self.results:
-            print(f"{r['dt']:<10.4f}{r['range']:<15.2f}{r['max_height']:<15.2f}{r['final_velocity']:<15.2f}")
-        print(f"{'='*60}\nВывод: При уменьшении шага точность растёт. Оптимально: 0.001-0.01 с")
 
 if __name__ == "__main__":
     App().mainloop()
