@@ -7,95 +7,118 @@
 
 Код программы:
 ```python
+import tkinter as tk
+from tkinter import messagebox
 import numpy as np
-import matplotlib.pyplot as plt
+import time
 
-L = 1.0            # длина пластины
-a = 1e-4       # коэффициент температуропроводности
-T_mod = 2.0      # время моделирования
+def solve():
+    try:
+        rho, c, lam = 7800, 460, 50
 
-dt_values = [0.1, 0.01, 0.001, 0.0001]
-dx_values = [0.1, 0.01, 0.001, 0.0001]
+        L = float(ent_L.get())
+        T_init = float(ent_Ti.get())
+        T_left = float(ent_Tl.get())
+        T_right = float(ent_Tr.get())
+        t_limit = float(ent_time.get())
+        dt = float(ent_dt.get())
+        dx = float(ent_dx.get())
 
-table = np.zeros((len(dt_values), len(dx_values)))
+        start = time.time()
 
-dt_plot = 0.01
-dx_plot = 0.01
+        nx = int(round(L / dx)) + 1
+        nt = int(t_limit / dt)
+        T = np.full(nx, T_init)
+        T[0], T[-1] = T_left, T_right
 
-for i_dt, dt in enumerate(dt_values):
-    for i_dx, dx in enumerate(dx_values):
+        A = lam / (dx ** 2)
+        C = lam / (dx ** 2)
+        B = 2 * A + (rho * c) / dt
+        
 
-        r = a * dt / dx**2
+        for _ in range(nt):
+            alpha = np.zeros(nx)
+            beta = np.zeros(nx)
 
-        # Проверка устойчивости
-        if r > 0.5:
-            table[i_dt, i_dx] = np.nan
-            continue
+            alpha[1] = 0
+            beta[1] = T_left
+            for i in range(1, nx - 1):
+                F = -(rho * c / dt) * T[i]
+                denom = B - C * alpha[i]
+                alpha[i + 1] = A / denom
+                beta[i + 1] = (C * beta[i] - F) / denom
 
-        nx = int(L / dx) + 1 # кол-во узлов пластины
-        x = np.linspace(0, L, nx)
-
-        T = np.zeros(nx)
-        T[nx // 2] = 100.0  # начальный нагрев в центре
-
-        t = 0.0
-        while t < T_mod:
-            T_new = T.copy()
-
-            for j in range(1, nx - 1):
-                T_new[j] = T[j] + r * (T[j+1] - 2*T[j] + T[j-1]) # МКР
-
-            T_new[0] = 0
-            T_new[-1] = 0
+            T_new = np.zeros(nx)
+            T_new[-1] = T_right
+            for i in range(nx - 2, 0, -1):
+                T_new[i] = alpha[i + 1] * T_new[i + 1] + beta[i + 1]
 
             T = T_new
-            t += dt
+            T[0], T[-1] = T_left, T_right
 
-        table[i_dt, i_dx] = T[nx // 2]
+        res_t.config(text=f"Температура в центре: {T[nx // 2]:.4f} ⁰С")
+        res_s.config(text=f"Время расчета: {time.time() - start:.4f} сек")
+    except:
+        messagebox.showerror("Ошибка", "Проверьте числа в полях")
 
-        if dt == dt_plot and dx == dx_plot:
-            T_plot = T.copy()
-            x_plot = x.copy()
+root = tk.Tk()
 
-print("\nТемпература в центре пластины через 2 секунды\n")
+def make_row(label):
+    f = tk.Frame(root)
+    f.pack(fill="x", padx=10, pady=2)
+    tk.Label(f, text=label, width=20).pack(side="left")
+    e = tk.Entry(f)
+    e.pack(side="right")
+    return e
 
-print("dt \\ dx", end="\t")
-for dx in dx_values:
-    print(dx, end="\t")
-print()
+ent_L = make_row("Толщина L, м:")
+ent_L.insert(0, "0.11")
+ent_Ti = make_row("Нач. т., С:")
+ent_Ti.insert(0, "20")
+ent_Tl = make_row("Т. слева, С:")
+ent_Tl.insert(0, "100")
+ent_Tr = make_row("Т. справа, С:")
+ent_Tr.insert(0, "100")
+ent_time = make_row("Общее время, с:")
+ent_time.insert(0, "2.0")
+ent_dt = make_row("Шаг dt, с:")
+ent_dt.insert(0, "0.01")
+ent_dx = make_row("Шаг dx, м:")
+ent_dx.insert(0, "0.01")
 
-for i, dt in enumerate(dt_values):
-    print(dt, end="\t")
-    for j in range(len(dx_values)):
-        if np.isnan(table[i, j]):
-            print("—", end="\t")
-        else:
-            print(f"{table[i, j]:.2f}", end="\t")
-    print()
+tk.Button(root, text="Расчет", command=solve).pack(pady=10)
+res_t = tk.Label(root, text="Температура: -")
+res_t.pack()
+res_s = tk.Label(root, text="Время: -")
+res_s.pack()
 
-plt.figure(figsize=(8, 5))
-plt.plot(x_plot, T_plot, linewidth=2)
-plt.xlabel("Координата x, м")
-plt.ylabel("Температура, °C")
-plt.title("Распределение температуры в пластине через 2 с")
-plt.grid(True)
-plt.show()
+root.mainloop()
 ```
-| Шаг по времени, с \ Шаг по пространству, м | 0.1 | 0.01 | 0.001 | 0.0001 |
-|-------------------------------------------|-----|------|-------|--------|
-| 0.1 |96.11 | 20.25| -| -|
-| 0.01 | 96.12| 20.65|- | -|
-| 0.001 | 96.12| 20.69|1.99 |-|
-| 0.0001 | 96.12| 20.70| 2| -|
-<img width="666" height="719" alt="image" src="https://github.com/ontotototo/simulation-course/blob/main/lab02/%D0%98%D0%9C2%D0%B3%D1%80%D0%B0%D1%84.png"/>
+Значения при 2 секундах:
+
+| Шаг по времени, с \ Шаг по пространству, м | 0.1     | 0.01    | 0.001 | 0.0001 |
+|-------------------------------------------|---------|---------|-------|--------|
+| 0.1 | 100     | 20.0011 | 20    | 20     |
+| 0.01 | 100     | 20.0008 | 20    | 20     |
+| 0.001 | 100     | 20.0007 | 20    | 20     |
+| 0.0001 | 20.0007 | 20      | 20    | 20     |
+
+Вводные параметры (Сталь):
+    Начальная температура 20 °C
+    Температура на границах 100 °C
+    Толщина материала (L): 0.11 м
+    Теплопроводность (λ): 50 Вт/(м·К)
+    Удельная теплоемкость: 460 Дж/(кг·К)
+    Плотность тела (ρ): 7800 кг/м³
+
+Значения при 15 секундах:
+
+| Шаг по времени, с \ Шаг по пространству, м | 0.1 | 0.01   | 0.001 | 0.0001  |
+|-------------------------------------------|-----|--------|-------|---------|
+| 0.1 | 100 | 21.99  | 21.18 | 21.17   |
+| 0.01 | 100 | 21.97  | 21.15 | 21.14   |
+| 0.001 | 100 | 21.96  | 21.14 | 21.14   |
+| 0.0001 | 100 | 21.969 | 21.14 | 21.1435 |
 
 ### Вывод
-В результате моделирования получены значения температуры в центральной точке пластины через 2 секунды модельного времени для различных сочетаний шагов
-
-Анализ таблицы результатов показывает, что шаг по пространству оказывает решающее влияние на точность численного решения. При больших значениях dx (0.1 м) температура в центре пластины оказывается существенно завышенной (около 96 °C), что объясняется грубым пространственным разбиением и недостаточным учётом теплопереноса между узлами.
-
-При уменьшении шага по пространству до 0.01 м и менее наблюдается резкое снижение температуры в центральной точке, что соответствует более корректному описанию процесса распространения тепла.
-
-Шаг по времени dt оказывает значительно меньшее влияние на конечный результат и в основном влияет на устойчивость схемы. При выполнении условия устойчивости изменение dt практически не изменяет полученные значения температуры, что подтверждается близкими результатами в строках таблицы.
-
-На графике распределения температуры по длине пластины через 2 секунды наблюдается симметричный температурный профиль с максимумом в центре пластины, что соответствует заданным начальным и граничным условиям и физическому смыслу процесса теплопроводности.
+11 см пластина стали за 2 секунды не изменится Т в центре, сталь не особо теплопроводный материал.
