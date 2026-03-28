@@ -12,6 +12,8 @@ $\beta = x_0^* = 2^{32} + 3$
 
 ### **Встроенный метод python**
 random.random()
+## Резултаты
+<img width="750" height="300" alt="image" src="https://github.com/ontotototo/simulation-course/blob/main/lab04/%D0%A1%D0%BD%D0%B8%D0%BC%D0%BE%D0%BA%20%D1%8D%D0%BA%D1%80%D0%B0%D0%BD%D0%B0%202026-03-28%20%D0%B2%2010.22.03.png" />
 # Выводы
 МКГ работает корректно:
 - Выборочные моменты отличаются от теоретических U[0,1) менее чем на 0.03%
